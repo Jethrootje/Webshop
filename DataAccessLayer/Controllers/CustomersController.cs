@@ -44,8 +44,8 @@ namespace DataAccessLayer.Controllers
 
 
 
-        // GET: api/Customers
-        [HttpGet("{email}, {password}")]
+        // POST: api/Customers
+        [HttpPost("{email}, {password}")]
         public async Task<ActionResult<Customer>> AuthenticateCustomer(string email, string password)
         {
             Customer _customer = _context.Customers.FirstOrDefault(x => x.Email == email && x.Password == password);
