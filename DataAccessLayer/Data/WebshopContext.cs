@@ -12,7 +12,7 @@ namespace DataAccessLayer.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(@"Server=localhost;Database=WebshopV1;Trusted_Connection=True;TrustServerCertificate=True;");
+            optionsBuilder.UseSqlServer(@"Server=localhost;Database=WebshopV3;Trusted_Connection=True;TrustServerCertificate=True;");
         }
     }
 }

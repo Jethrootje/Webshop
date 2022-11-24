@@ -7,6 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DataAccessLayer.Data;
 using DataAccessLayer.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace DataAccessLayer.Controllers
 {
@@ -19,17 +24,58 @@ namespace DataAccessLayer.Controllers
         public CustomersController(WebshopContext context)
         {
             _context = context;
+
+            Customer customer = new Customer() { FirstName = "Jethro", LastName = "van den Oever", Address = "Dr. Mollerstraat 20", Email = "jethro02@live.nl", Password = "testtest", Phone = "0621126588", Role = "Admin" };
+            context.Add<Customer>(customer);
+            context.SaveChanges();
         }
 
         // GET: api/Customers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers()
         {
-          if (_context.Customers == null)
-          {
-              return NotFound();
-          }
+            if (_context.Customers == null)
+            {
+                return NotFound();
+            }
             return await _context.Customers.ToListAsync();
+        }
+
+
+
+
+        // GET: api/Customers
+        [HttpGet("{email}, {password}")]
+        public async Task<ActionResult<Customer>> AuthenticateCustomer(string email, string password)
+        {
+            Customer _customer = _context.Customers.FirstOrDefault(x => x.Email == email && x.Password == password);
+
+            // return null if user not found
+            if (_customer == null)
+            {
+                return BadRequest(new { message = "Username or password is incorrect" });
+            }
+
+            // authentication successful so generate jwt token
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes("THIS IS USED TO SIGN AND VERIFY JWT TOKENS, REPLACE IT WITH YOUR OWN SECRET, IT CAN BE ANY STRING");
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.Email, _customer.Id.ToString()),
+                    new Claim(ClaimTypes.Role, _customer.Role)
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            _customer.Token = tokenHandler.WriteToken(token);
+
+            // remove password before returning
+            _customer.Password = null;
+
+            return await _context.Customers.FindAsync(_customer.Id);
         }
 
         // GET: api/Customers/5
@@ -86,10 +132,10 @@ namespace DataAccessLayer.Controllers
         [HttpPost]
         public async Task<ActionResult<Customer>> PostCustomer(Customer customer)
         {
-          if (_context.Customers == null)
-          {
-              return Problem("Entity set 'WebshopContext.Customers'  is null.");
-          }
+            if (_context.Customers == null)
+            {
+                return Problem("Entity set 'WebshopContext.Customers'  is null.");
+            }
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
